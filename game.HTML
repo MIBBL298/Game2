@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spieleauswahl</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            color: #666;
+        }
+
+        input {
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #message {
+            color: #d9534f;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        #attempts {
+            font-weight: bold;
+            color: #333;
+        }
+
+        #highscore {
+            margin-top: 20px;
+            color: #333;
+        }
+
+        #inputHistory {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .dark-mode {
+            background-color: #333;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spiel-Auswahl</h1>
+    <p>Wähle ein Spiel:</p>
+    <select id="gameSelector" onchange="startGame()">
+        <option value="guessNumber">Zahlenraten</option>
+        <option value="otherGame">Anderes Zahlenraten-Spiel</option>
+        <option value="higherLowerGame">Höher oder Tiefer</option>
+        <option value="riddleGame">Rätselspiel</option>
+    </select>
+    <br>
+    <div id="guessNumberGame" style="display: none;">
+        <h2>Zahlenraten-Spiel</h2>
+        <p>Rät eine Zahl zwischen 1 und 100:</p>
+        <input type="number" id="userGuess" placeholder="Gib deine Schätzung ein" min="1" max="100">
+        <button onclick="checkGuess()">Schätzung abschicken</button>
+        <button onclick="resetGame()">Spiel neu starten</button>
+        <button onclick="toggleDarkMode()">Dunkel-Modus umschalten</button>
+        <p id="message"></p>
+        <p>Versuche: <span id="attempts">0</span></p>
+        <p id="highscore">Bestleistung: <span id="bestAttempts">--</span> Versuche</p>
+        <ul id="guessList"></ul>
+    </div>
+
+    <div id="otherGame" style="display: none;">
+        <h2>Anderes Zahlenraten-Spiel</h2>
+        <p>Rät eine Zahl zwischen 1 und 50:</p>
+        <input type="number" id="otherGameGuess" placeholder="Gib deine Schätzung ein" min="1" max="50">
+        <button onclick="checkOtherGameGuess()">Schätzung abschicken</button>
+        <button onclick="resetOtherGame()">Spiel neu starten</button>
+        <button onclick="toggleDarkMode()">Dunkel-Modus umschalten</button>
+        <p id="otherGameMessage"></p>
+        <p>Versuche: <span id="otherGameAttempts">0</span></p>
+        <p id="otherGameHighscore">Bestleistung: <span id="otherGameBestAttempts">--</span> Versuche</p>
+    </div>
+
+    <div id="higherLowerGame" style="display: none;">
+        <h2>Höher oder Tiefer Spiel</h2>
+        <p>Ist die nächste Zahl höher oder tiefer als die aktuelle Zahl?</p>
+        <p id="currentNumber">Aktuelle Zahl: <span id="currentNum">--</span></p>
+        <button onclick="startHigherLowerGame()">Spiel starten</button>
+        <button onclick="guessHigher()">Höher</button>
+        <button onclick="guessLower()">Tiefer</button>
+        <button onclick="resetHigherLowerGame()">Spiel neu starten</button>
+        <button onclick="toggleDarkMode()">Dunkel-Modus umschalten</button>
+        <p id="higherLowerMessage"></p>
+        <p>Runden: <span id="higherLowerRounds">0</span></p>
+    </div>
+
+    <div id="riddleGame" style="display: none;">
+        <h2>Rätselspiel</h2>
+        <p>Löse das Rätsel, um zu gewinnen:</p>
+        <p id="riddleText"></p>
+        <input type="text" id="riddleAnswer" placeholder="Deine Antwort">
+        <button onclick="checkRiddleAnswer()">Antwort abschicken</button>
+        <button onclick="resetRiddleGame()">Spiel neu starten</button>
+        <button onclick="toggleDarkMode()">Dunkel-Modus umschalten</button>
+        <p id="riddleMessage"></p>
+    </div>
+
+    <script>
+        let secretNumber, attempts, inputHistory;
+        let otherGameSecretNumber, otherGameAttempts;
+        let currentNumber, higherLowerRounds, higherLowerGameActive;
+        let riddleAnswer, riddleSolved;
+
+        function startGame() {
+            const gameSelector = document.getElementById('gameSelector');
+            const selectedGame = gameSelector.value;
+
+            if (selectedGame === 'guessNumber') {
+                document.getElementById('guessNumberGame').style.display = 'block';
+                document.getElementById('otherGame').style.display = 'none';
+                document.getElementById('higherLowerGame').style.display = 'none';
+                document.getElementById('riddleGame').style.display = 'none';
+                startGuessNumberGame();
+            } else if (selectedGame === 'otherGame') {
+                document.getElementById('guessNumberGame').style.display = 'none';
+                document.getElementById('otherGame').style.display = 'block';
+                document.getElementById('higherLowerGame').style.display = 'none';
+                document.getElementById('riddleGame').style.display = 'none';
+                startOtherGame();
+            } else if (selectedGame === 'higherLowerGame') {
+                document.getElementById('guessNumberGame').style.display = 'none';
+                document.getElementById('otherGame').style.display = 'none';
+                document.getElementById('higherLowerGame').style.display = 'block';
+                document.getElementById('riddleGame').style.display = 'none';
+                resetHigherLowerGame();
+            } else if (selectedGame === 'riddleGame') {
+                document.getElementById('guessNumberGame').style.display = 'none';
+                document.getElementById('otherGame').style.display = 'none';
+                document.getElementById('higherLowerGame').style.display = 'none';
+                document.getElementById('riddleGame').style.display = 'block';
+                startRiddleGame();
+            }
+        }
+
+        function startGuessNumberGame() {
+            secretNumber = generateRandomNumber();
+            attempts = 0;
+            inputHistory = [];
+            document.getElementById('userGuess').disabled = false;
+            document.getElementById('message').innerHTML = '';
+            updateAttemptsDisplay();
+            loadHighscore();
+            updateGuessList();
+        }
+
+        function generateRandomNumber() {
+            return Math.floor(Math.random() * 100) + 1;
+        }
+
+        function checkGuess() {
+            const userGuessElement = document.getElementById('userGuess');
+            const userGuess = parseInt(userGuessElement.value);
+
+            if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+                document.getElementById('message').innerHTML = 'Bitte gib eine gültige Zahl zwischen 1 und 100 ein.';
+                return;
+            }
+
+            attempts++;
+
+            if (userGuess === secretNumber) {
+                document.getElementById('message').innerHTML = `Herzlichen Glückwunsch! Du hast die Zahl ${secretNumber} in ${attempts} Versuchen erraten.`;
+                userGuessElement.disabled = true;
+                updateHighscore();
+            } else {
+                const message = getGuessFeedback(userGuess);
+                document.getElementById('message').innerHTML = message;
+            }
+
+            updateAttemptsDisplay();
+            updateGuessList();
+        }
+
+        function getGuessFeedback(userGuess) {
+            const difference = Math.abs(secretNumber - userGuess);
+
+            if (difference <= 10) {
+                return `Nahe dran! Versuche es erneut.`;
+            } else {
+                return userGuess < secretNumber ? 'Zu niedrig! Versuche es erneut.' : 'Zu hoch! Versuche es erneut.';
+            }
+        }
+
+        function updateAttemptsDisplay() {
+            document.getElementById('attempts').textContent = attempts;
+        }
+
+        function updateHighscore() {
+            const bestAttempts = localStorage.getItem('bestAttempts');
+
+            if (bestAttempts === null || attempts < bestAttempts) {
+                localStorage.setItem('bestAttempts', attempts);
+                document.getElementById('bestAttempts').textContent = attempts;
+            }
+        }
+
+        function loadHighscore() {
+            const bestAttempts = localStorage.getItem('bestAttempts');
+
+            if (bestAttempts !== null) {
+                document.getElementById('bestAttempts').textContent = bestAttempts;
+            }
+        }
+
+        function updateGuessList() {
+            const guessList = document.getElementById('guessList');
+            guessList.innerHTML = '';
+
+            for (let i = 0; i < inputHistory.length; i++) {
+                const listItem = document.createElement('li');
+                listItem.textContent = `Versuch ${i + 1}: ${inputHistory[i]}`;
+                guessList.appendChild(listItem);
+            }
+        }
+
+        function resetGame() {
+            startGuessNumberGame();
+            document.getElementById('userGuess').value = '';
+            document.getElementById('userGuess').disabled = false;
+        }
+
+        function startOtherGame() {
+            otherGameSecretNumber = generateRandomNumberForOtherGame();
+            otherGameAttempts = 0;
+            document.getElementById('otherGameGuess').disabled = false;
+            document.getElementById('otherGameMessage').innerHTML = '';
+            updateOtherGameAttemptsDisplay();
+            loadOtherGameHighscore();
+        }
+
+        function generateRandomNumberForOtherGame() {
+            return Math.floor(Math.random() * 50) + 1;
+        }
+
+        function checkOtherGameGuess() {
+            const otherGameGuessElement = document.getElementById('otherGameGuess');
+            const otherGameGuess = parseInt(otherGameGuessElement.value);
+
+            if (isNaN(otherGameGuess) || otherGameGuess < 1 || otherGameGuess > 50) {
+                document.getElementById('otherGameMessage').innerHTML = 'Bitte gib eine gültige Zahl zwischen 1 und 50 ein.';
+                return;
+            }
+
+            otherGameAttempts++;
+
+            if (otherGameGuess === otherGameSecretNumber) {
+                document.getElementById('otherGameMessage').innerHTML = `Herzlichen Glückwunsch! Du hast die Zahl ${otherGameSecretNumber} in ${otherGameAttempts} Versuchen erraten.`;
+                otherGameGuessElement.disabled = true;
+                updateOtherGameHighscore();
+            } else {
+                const message = getOtherGameGuessFeedback(otherGameGuess);
+                document.getElementById('otherGameMessage').innerHTML = message;
+            }
+
+            updateOtherGameAttemptsDisplay();
+        }
+
+        function getOtherGameGuessFeedback(otherGameGuess) {
+            const difference = Math.abs(otherGameSecretNumber - otherGameGuess);
+
+            if (difference <= 5) {
+                return `Nahe dran! Versuche es erneut.`;
+            } else {
+                return otherGameGuess < otherGameSecretNumber ? 'Zu niedrig! Versuche es erneut.' : 'Zu hoch! Versuche es erneut.';
+            }
+        }
+
+        function updateOtherGameAttemptsDisplay() {
+            document.getElementById('otherGameAttempts').textContent = otherGameAttempts;
+        }
+
+        function updateOtherGameHighscore() {
+            const otherGameBestAttempts = localStorage.getItem('otherGameBestAttempts');
+
+            if (otherGameBestAttempts === null || otherGameAttempts < otherGameBestAttempts) {
+                localStorage.setItem('otherGameBestAttempts', otherGameAttempts);
+                document.getElementById('otherGameBestAttempts').textContent = otherGameAttempts;
+            }
+        }
+
+        function loadOtherGameHighscore() {
+            const otherGameBestAttempts = localStorage.getItem('otherGameBestAttempts');
+
+            if (otherGameBestAttempts !== null) {
+                document.getElementById('otherGameBestAttempts').textContent = otherGameBestAttempts;
+            }
+        }
+
+        function resetOtherGame() {
+            startOtherGame();
+            document.getElementById('otherGameGuess').value = '';
+            document.getElementById('otherGameGuess').disabled = false;
+        }
+
+        function startHigherLowerGame() {
+            currentNumber = generateRandomNumber();
+            higherLowerRounds = 0;
+            higherLowerGameActive = true;
+            document.getElementById('currentNum').textContent = currentNumber;
+            document.getElementById('higherLowerMessage').innerHTML = '';
+            document.getElementById('higherLowerRounds').textContent = 0;
+        }
+
+        function guessHigher() {
+            if (higherLowerGameActive) {
+                const nextNumber = generateRandomNumber();
+
+                if (nextNumber > currentNumber) {
+                    higherLowerRounds++;
+                    document.getElementById('currentNum').textContent = nextNumber;
+                    document.getElementById('higherLowerRounds').textContent = higherLowerRounds;
+                    document.getElementById('higherLowerMessage').innerHTML = 'Richtig! Nächste Zahl ist höher.';
+                } else {
+                    endHigherLowerGame();
+                }
+            }
+        }
+
+        function guessLower() {
+            if (higherLowerGameActive) {
+                const nextNumber = generateRandomNumber();
+
+                if (nextNumber < currentNumber) {
+                    higherLowerRounds++;
+                    document.getElementById('currentNum').textContent = nextNumber;
+                    document.getElementById('higherLowerRounds').textContent = higherLowerRounds;
+                    document.getElementById('higherLowerMessage').innerHTML = 'Richtig! Nächste Zahl ist niedriger.';
+                } else {
+                    endHigherLowerGame();
+                }
+            }
+        }
+
+        function endHigherLowerGame() {
+            higherLowerGameActive = false;
+            document.getElementById('higherLowerMessage').innerHTML = 'Falsch! Das Spiel ist vorbei.';
+        }
+
+        function resetHigherLowerGame() {
+            startHigherLowerGame();
+        }
+
+        function startRiddleGame() {
+            generateMathProblem();
+            document.getElementById('riddleAnswer').value = '';
+            document.getElementById('riddleAnswer').disabled = false;
+            document.getElementById('riddleMessage').innerHTML = '';
+        }
+
+        function generateMathProblem() {
+            const num1 = Math.floor(Math.random() * 100) + 1;
+            const num2 = Math.floor(Math.random() * 100) + 1;
+            const operator = Math.random() < 0.5 ? '+' : '-'; // 50% Wahrscheinlichkeit für Addition oder Subtraktion
+
+            if (operator === '+') {
+                riddleAnswer = num1 + num2;
+                document.getElementById('riddleText').innerHTML = `Löse die Aufgabe: ${num1} + ${num2}`;
+            } else {
+                // Stelle sicher, dass das Ergebnis nicht negativ wird
+                if (num1 < num2) {
+                    const temp = num1;
+                    num1 = num2;
+                    num2 = temp;
+                }
+                riddleAnswer = num1 - num2;
+                document.getElementById('riddleText').innerHTML = `Löse die Aufgabe: ${num1} - ${num2}`;
+            }
+
+            document.getElementById('riddleMessage').innerHTML = '';
+        }
+
+        function checkRiddleAnswer() {
+            const userAnswerElement = document.getElementById('riddleAnswer');
+            const userAnswer = parseInt(userAnswerElement.value);
+
+            if (isNaN(userAnswer)) {
+                document.getElementById('riddleMessage').innerHTML = 'Bitte gib eine gültige Zahl als Antwort ein.';
+                return;
+            }
+
+            if (userAnswer === riddleAnswer) {
+                document.getElementById('riddleMessage').innerHTML = 'Richtig! Du hast das Rätsel gelöst.';
+                riddleSolved = true;
+            } else {
+                document.getElementById('riddleMessage').innerHTML = 'Falsch! Versuche es erneut.';
+            }
+        }
+
+        function resetRiddleGame() {
+            startRiddleGame();
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        window.onload = startGame;
+    </script>
+</body>
+</html>
